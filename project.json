@@ -4,7 +4,9 @@
   "description": "Municipal Complaint Automation Bot",
   "main": "Main.xaml",
   "dependencies": {
+    "UiPath.DocumentUnderstanding.ML.Activities": "[2.1.0-preview]",
     "UiPath.Excel.Activities": "[3.5.0-preview]",
+    "UiPath.IntelligentOCR.Activities": "[7.1.0-preview]",
     "UiPath.System.Activities": "[26.2.4]"
   },
   "webServices": [],
@@ -37,7 +39,10 @@
       "privateWorkflows": []
     },
     "processOptions": {
-      "ignoredFiles": []
+      "ignoredFiles": [
+        "Workflows/TestExtractFromPDF.xaml",
+        "Workflows/TestWriteOutputCSVOnly.xaml"
+      ]
     },
     "fileInfoCollection": [],
     "saveToCloud": false

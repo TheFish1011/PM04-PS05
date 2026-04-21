@@ -45,11 +45,16 @@
       "Path": "Main.xaml",
       "SortBy": 0,
       "VariablesSectionElementsOrder": [
-        "strSourceType&Sequence_1",
-        "dt_Normalized&Sequence_1",
-        "dt_Errors&Sequence_2",
-        "dt_Classified&Sequence_2",
-        "dt_Complaints&Sequence_2"
+        "dt_ClassifiedComplaints&Sequence_2",
+        "dt_NormalizedComplaints&Sequence_11",
+        "boolCSVExists&Sequence_1",
+        "strCurrentPdf&Sequence_1",
+        "arrPdfFIles&Sequence_1",
+        "dt_PDFExtracted&Sequence_1",
+        "dt_CSVCompliants&Sequence_1",
+        "dt_Errors&Sequence_1",
+        "dt_Complaints&Sequence_1",
+        "dt_Normalized&Sequence_1"
       ],
       "ArgumentsSectionElementsOrder": null,
       "ConstantsSectionElementsOrder": null,
@@ -82,7 +87,13 @@
     {
       "Path": "Workflows/ExtractFromPDF.xaml",
       "SortBy": 0,
-      "VariablesSectionElementsOrder": null,
+      "VariablesSectionElementsOrder": [
+        "extractionResult&Sequence_2",
+        "classificationResult&Sequence_2",
+        "strDocText&Sequence_2",
+        "docObjectModel&Sequence_2",
+        "taxonomyObj&Sequence_2"
+      ],
       "ArgumentsSectionElementsOrder": null,
       "ConstantsSectionElementsOrder": null,
       "AddedNamespaces": null
@@ -91,6 +102,37 @@
       "Path": "Workflows/NormalizeComplaints.xaml",
       "SortBy": 0,
       "VariablesSectionElementsOrder": null,
+      "ArgumentsSectionElementsOrder": null,
+      "ConstantsSectionElementsOrder": null,
+      "AddedNamespaces": null
+    },
+    {
+      "Path": "Workflows/TestExtractFromPDF.xaml",
+      "SortBy": 0,
+      "VariablesSectionElementsOrder": [
+        "strOutputPath&Sequence_1",
+        "dt_AllExtracted&Sequence_1",
+        "dt_CurrentExtracted&Sequence_1",
+        "strFileName&Sequence_1",
+        "strCurrentPdf&Sequence_1",
+        "arrPdfFiles&Sequence_1"
+      ],
+      "ArgumentsSectionElementsOrder": null,
+      "ConstantsSectionElementsOrder": null,
+      "AddedNamespaces": null
+    },
+    {
+      "Path": "Workflows/NormalizeData.xaml",
+      "SortBy": 0,
+      "VariablesSectionElementsOrder": [
+        "dtNormalized&Sequence_2",
+        "blnDateParsed&Sequence_4",
+        "strComplaintText&Sequence_4",
+        "strCitizenName&Sequence_4",
+        "dtParsedDate&Sequence_1",
+        "strDateValue&Sequence_1",
+        "strComplaintID&Sequence_1"
+      ],
       "ArgumentsSectionElementsOrder": null,
       "ConstantsSectionElementsOrder": null,
       "AddedNamespaces": null
