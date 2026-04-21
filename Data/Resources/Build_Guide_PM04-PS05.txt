@@ -1,0 +1,433 @@
+================================================================================
+  STEP-BY-STEP BUILD GUIDE
+  PM04-PS05 — Municipal Complaint Automation Bot
+  Generated: 2026/04/21
+================================================================================
+
+--------------------------------------------------------------------------------
+PROJECT SETUP
+--------------------------------------------------------------------------------
+
+1. Create a new UiPath Process project named "PM04-PS05" with the description
+   "Municipal Complaint Automation Bot" using the Windows framework.
+
+2. Create the following folder structure inside the project:
+   - Data/Input/             (for the CSV file and PDF complaints)
+   - Data/Input/SamplePDFs/  (for sample PDF complaint files)
+   - Data/Output/            (for output Excel files)
+   - DocumentProcessing/     (for the taxonomy file)
+   - Workflows/              (for all sub-workflows)
+
+
+--------------------------------------------------------------------------------
+STEP 1 — Create ReadComplaints.xaml
+PURPOSE: Read municipal complaints from a CSV file
+--------------------------------------------------------------------------------
+
+1. Create a new workflow file: Workflows/ReadComplaints.xaml
+
+2. Add one Output Argument:
+   - out_ComplaintsTable (DataTable)
+
+3. Inside a Sequence, add the following activities in order:
+   a. Log Message
+      - Message: "Starting to read complaints CSV file"
+
+   b. Read CSV File
+      - File Path: Data\Input\MUNICIPAL_Complaints.csv
+      - Delimiter: Comma
+      - Output: out_ComplaintsTable
+
+   c. Log Message
+      - Message: "Read " + out_ComplaintsTable.Rows.Count.ToString() +
+                 " complaint records"
+
+
+--------------------------------------------------------------------------------
+STEP 2 — Create ExtractFromPDF.xaml
+PURPOSE: Use Document Understanding to extract structured data from a PDF
+--------------------------------------------------------------------------------
+
+1. Create a new workflow file: Workflows/ExtractFromPDF.xaml
+
+2. Add the following Arguments:
+   - in_PDFFilePath    (In,  String)
+   - out_ExtractedData (Out, DataTable)
+
+3. Add the following Variables:
+   - dsExtracted         (Dataset)
+   - extractionResult    (ExtractionResult)
+   - classificationResult (ClassificationResult)
+   - strDocText          (String)
+   - docObjectModel      (Document)
+   - taxonomyObj         (DocumentTaxonomy)
+
+4. Inside a Sequence, add activities in order:
+   a. Log Message
+      - Message: "Starting Document Understanding for: " + in_PDFFilePath
+
+   b. Load Taxonomy
+      - File: DocumentProcessing/taxonomy.json
+      - Output: taxonomyObj
+
+   c. Digitize Document
+      - Input: in_PDFFilePath
+      - Outputs: strDocText, docObjectModel
+      - OCR Engine: UiPath Document OCR (add inside the scope)
+
+   d. Classify Document Scope (DisplayName: "Classify Complaint Document")
+      - DocumentPath:        in_PDFFilePath
+      - DocumentText:        strDocText
+      - DocumentObjectModel: docObjectModel
+      - Taxonomy:            taxonomyObj
+      - ClassificationResults: classificationResult
+      * NOTE: Add a classifier (e.g. Keyword Classifier) inside this scope
+
+   e. Data Extraction Scope (DisplayName: "Extract Complaint Fields")
+      - DocumentPath:        in_PDFFilePath
+      - DocumentText:        strDocText
+      - DocumentObjectModel: docObjectModel
+      - Taxonomy:            taxonomyObj
+      - ClassificationResult: classificationResult
+      - ExtractionResult:    extractionResult
+      * NOTE: Add an extractor (e.g. Form Extractor) inside this scope
+
+   f. Export Extraction Results
+      - ExtractionResult: extractionResult
+      - Output DataSet:   dsExtracted
+
+   g. Assign
+      - out_ExtractedData = dsExtracted.Tables(0)
+
+
+--------------------------------------------------------------------------------
+STEP 3 — Create NormalizeData.xaml
+PURPOSE: Clean and validate every complaint row before processing
+--------------------------------------------------------------------------------
+
+1. Create a new workflow file: Workflows/NormalizeData.xaml
+
+2. Add the following Arguments:
+   - in_ComplaintsTable      (In,  DataTable)
+   - out_NormalizedComplaints (Out, DataTable)
+   - out_ErrorLog            (In,  DataTable)
+
+3. Add the following Variables:
+   - arrDateFormats  (String[]) — default: {"yyyy-MM-dd","yyyy/MM/dd HH:mm:ss"}
+   - dtParsedDate    (DateTime)
+   - strDateValue    (String)
+   - strComplaintId  (String)
+   - strComplaintText (String)
+   - strCitizenName  (String)
+   - blnDateParsed   (Boolean)
+   - dtNormalized    (DataTable)
+
+4. Inside a Sequence, add:
+   a. Build Data Table
+      - Columns: Complaint_ID, Error_Message, Timestamp
+      - Output:  out_ErrorLog
+
+   b. Assign
+      - dtNormalized = in_ComplaintsTable.Clone()
+        (Creates a clean copy of the table structure)
+
+   c. For Each Row in in_ComplaintsTable:
+      - Try/Catch block wrapping all cleaning logic:
+
+        TRY:
+          i.   Assign — strComplaintId  = CurrentRow("Complaint_ID").ToString.Trim
+          ii.  Assign — strCitizenName  = CurrentRow("Citizen_Name").ToString.Trim
+          iii. Assign — strComplaintText = CurrentRow("Complaint_Text").ToString.Trim
+          iv.  Assign — clean text with Regex:
+               strComplaintText = Regex.Replace(strComplaintText, "\s+", " ")
+          v.   Assign — strDateValue = CurrentRow("Date_Received").ToString.Trim
+
+          vi.  If — String.IsNullOrWhiteSpace(strComplaintText):
+               THEN: Add Data Row to out_ErrorLog
+                     {strComplaintId, "Empty Complaint_Text", Now.ToString()}
+                     Log Message (Warn): "Warning: Complaint " + ID +
+                                          " has empty Complaint_Text"
+
+          vii. If — Not String.IsNullOrWhiteSpace(strDateValue):
+               THEN:
+                 - Assign: strip CR/LF from strDateValue
+                 - Assign: dtParsedDate = DateTime.ParseExact(
+                             strDateValue, arrDateFormats,
+                             CultureInfo.InvariantCulture)
+                 - Assign: strDateValue = dtParsedDate.ToString("yyyy-MM-dd")
+               ELSE:
+                 - Add Data Row to out_ErrorLog
+                   {strComplaintId, "Empty Date_Received", Now.ToString()}
+                 - Log Message (Warn): date is missing
+
+          viii. Add Data Row to dtNormalized:
+                {strComplaintId, strCitizenName, strComplaintText, strDateValue}
+
+        CATCH (Exception):
+          - Add Data Row to out_ErrorLog: {strComplaintId, exception.Message, Now}
+          - Log Message (Warn): error details
+
+   d. Assign
+      - out_NormalizedComplaints = dtNormalized
+
+
+--------------------------------------------------------------------------------
+STEP 4 — Create ClassifyComplaint.xaml
+PURPOSE: Classify each complaint using keyword matching
+--------------------------------------------------------------------------------
+
+1. Create a new workflow file: Workflows/ClassifyComplaint.xaml
+
+2. Add the following Arguments:
+   - io_ClassifiedComplaints (In/Out, DataTable)
+   - in_ErrorLog             (In,     DataTable)
+
+3. Inside a Sequence, add:
+   a. Add Data Column
+      - Column Name: "Bot_Classification" (String)
+      - DataTable:   io_ClassifiedComplaints
+
+   b. For Each Row in io_ClassifiedComplaints:
+      (Variables inside loop: strComplaintText, strClassification)
+
+      i.   Assign — strComplaintText = CurrentRow("Complaint_Text")
+                    .ToString().ToLower().Trim()
+
+      ii.  Assign — strClassification = "Other" (default value)
+
+      iii. If/ElseIf — keyword matching:
+           - WATER:       text contains "burst pipe"
+                       OR "no water supply"
+                       OR "low water pressure"
+                       → strClassification = "Water"
+
+           - ELECTRICITY: text contains "load shedding"
+                       OR "transformer exploded"
+                       OR "no power"
+                       → strClassification = "Electricity"
+
+           - REFUSE:      text contains "bin not collected"
+                       OR "rubbish piling up"
+                       OR "refuse truck missed"
+                       → strClassification = "Refuse"
+
+           - ELSE:        strClassification remains "Other"
+
+      iv.  Assign — CurrentRow("Bot_Classification") = strClassification
+
+      v.   Log Message (Info)
+           "Complaint " + ID + " classified as " + strClassification
+
+
+--------------------------------------------------------------------------------
+STEP 5 — Create WriteOutput.xaml
+PURPOSE: Write classified complaints and error log to Excel
+--------------------------------------------------------------------------------
+
+1. Create a new workflow file: Workflows/WriteOutput.xaml
+
+2. Add the following Arguments:
+   - in_ClassifiedTable (In, DataTable)
+   - in_ErrorLog        (In, DataTable)
+
+3. Inside a Sequence, add:
+   a. Write Range
+      - DataTable:    in_ClassifiedTable
+      - Workbook:     Data\Output\Out_Classified_Complaints.xlsx
+      - Sheet Name:   "Complaints"
+
+   b. If — in_ErrorLog IsNot Nothing AndAlso in_ErrorLog.Rows.Count > 0:
+      THEN:
+        Write Range
+        - DataTable:  in_ErrorLog
+        - Workbook:   Data\Output\Error_Log.xlsx
+        - Sheet Name: "Errors"
+      ELSE: (no action)
+
+   c. Log Message (Info)
+      - "Output files written successfully to Data/Output/"
+
+
+--------------------------------------------------------------------------------
+STEP 6 — Create SendSummaryEmail.xaml
+PURPOSE: Send a daily summary email to the supervisor via Gmail (GSuite)
+--------------------------------------------------------------------------------
+
+1. Create a new workflow file: Workflows/SendSummaryEmail.xaml
+
+2. Add the following Arguments:
+   - in_SupervisorEmail (In, String)
+   - in_ErrorCount      (In, Int32)
+   - in_ClassifiedTable (In, DataTable)
+
+3. Add Variables:
+   - strEmailBody  (String)
+   - intWater      (Int32)
+   - intElectricity (Int32)
+   - intRefuse     (Int32)
+   - intOther      (Int32)
+   - intTotal      (Int32)
+
+4. Inside a Sequence, add:
+   a. If — in_ClassifiedTable Is Nothing OrElse Rows.Count = 0:
+      THEN: Log Message (Warn) — skip email, table is empty
+
+   b. If — column "Bot_Classification" does not exist:
+      THEN: Log Message (Warn) — column not found, cannot send email
+
+   c. Assign — count each category:
+      - intWater       = in_ClassifiedTable.Select("Bot_Classification='Water'").Length
+      - intElectricity = in_ClassifiedTable.Select("Bot_Classification='Electricity'").Length
+      - intRefuse      = in_ClassifiedTable.Select("Bot_Classification='Refuse'").Length
+      - intOther       = in_ClassifiedTable.Select("Bot_Classification='Other'").Length
+      - intTotal       = in_ClassifiedTable.Rows.Count
+
+   d. Assign — Build email body (strEmailBody):
+      "Daily Complaint Summary"
+      "Total complaints processed: " + intTotal
+      "Water: "       + intWater
+      "Electricity: " + intElectricity
+      "Refuse: "      + intRefuse
+      "Other: "       + intOther
+
+   e. Log Message (Info) — "Summary email sent successfully"
+
+   f. Send Email (GSuite/Gmail Connection)
+      - Subject: "Daily Complaints Summary"
+      - To:      {in_SupervisorEmail}
+      - Body:    strEmailBody
+
+
+--------------------------------------------------------------------------------
+STEP 7 — Build Main.xaml (Orchestrator)
+PURPOSE: Orchestrate all sub-workflows in sequence
+--------------------------------------------------------------------------------
+
+1. Open Main.xaml and add the following Variables:
+   - strSupervisorEmail     (String)
+   - boolCSVExists          (Boolean)
+   - strCurrentPdf          (String)
+   - arrPdfFiles            (String[])
+   - dt_PDFExtracted        (DataTable)
+   - dt_CSVComplaints       (DataTable)
+   - dt_Errors              (DataTable)
+   - dt_MasterComplaintsRaw (DataTable)
+   - dt_NormalizedComplaints (DataTable)
+   - dt_ClassifiedComplaints (DataTable)
+
+2. Inside a Sequence ("Main Process"), add activities in order:
+
+   A. LOG BOT STARTED
+      Log Message (Info): "Municipal Complaint Bot started at " + Now.ToString()
+
+   B. BUILD MASTER TABLE
+      Build Data Table — columns: Complaint_ID, Citizen_Name,
+                                   Complaint_Text, Date_Received
+      Output: dt_MasterComplaintsRaw
+
+   C. CSV EXTRACTION (Sequence)
+      i.  Assign:
+          boolCSVExists = System.IO.File.Exists("Data\Input\MUNICIPAL_Complaints.csv")
+
+      ii. If boolCSVExists = True:
+          THEN:
+            - Invoke Workflow: ReadComplaints.xaml
+              Output Arg: out_ComplaintsTable → dt_CSVComplaints
+            - For Each Row in dt_CSVComplaints:
+                Add Data Row to dt_MasterComplaintsRaw:
+                {Complaint_ID, Citizen_Name, Complaint_Text, Date_Received}
+          ELSE:
+            - Log Message: "CSV file not found. Skipping CSV input."
+
+   D. PDF EXTRACTION (Sequence)
+      i.  Assign:
+          arrPdfFiles = System.IO.Directory.GetFiles(
+                          "Data\Input\SamplePDFs", "*.pdf")
+
+      ii. If arrPdfFiles.Length > 0:
+          THEN:
+            - For Each item in arrPdfFiles:
+                Assign: strCurrentPdf = item.ToString
+                Invoke Workflow: ExtractFromPDF.xaml
+                  Input Arg:  in_PDFFilePath  → strCurrentPdf
+                  Output Arg: out_ExtractedData → dt_PDFExtracted
+                For Each Row in dt_PDFExtracted:
+                  Add Data Row to dt_MasterComplaintsRaw:
+                  {Complaint_ID, Citizen_Name, Complaint_Text, Date_Received}
+          ELSE:
+            - Log Message: "No PDF files found. Skipping PDF input."
+
+   E. GUARD CHECK — If dt_MasterComplaintsRaw.Rows.Count = 0:
+      THEN: Log Message (Warn):
+            "No complaint records found from CSV or PDF sources."
+
+      ELSE (continue processing):
+        i.   Log Message — confirm row count in master table
+
+        ii.  Invoke Workflow: NormalizeData.xaml
+             Input Arg:   in_ComplaintsTable   → dt_MasterComplaintsRaw
+             Output Args: out_NormalizedComplaints → dt_NormalizedComplaints
+                          out_ErrorLog             → dt_Errors
+
+        iii. Log Message — confirm normalized row count
+
+        iv.  Assign: dt_ClassifiedComplaints = dt_NormalizedComplaints.Copy()
+
+        v.   Log Message — confirm classified table row count
+
+        vi.  Invoke Workflow: ClassifyComplaint.xaml
+             InOut Arg:   io_ClassifiedComplaints → dt_ClassifiedComplaints
+             Input Arg:   in_ErrorLog             → dt_Errors
+
+        vii. Log Message — confirm classification complete
+
+        viii.Invoke Workflow: WriteOutput.xaml
+             Input Args: in_ClassifiedTable → dt_ClassifiedComplaints
+                         in_ErrorLog        → dt_Errors
+
+        ix.  Invoke Workflow: SendSummaryEmail.xaml
+             Input Args: in_SupervisorEmail → strSupervisorEmail
+                         in_ErrorCount      → If(dt_Errors Is Nothing, 0,
+                                                 dt_Errors.Rows.Count)
+                         in_ClassifiedTable → dt_ClassifiedComplaints
+
+        x.   Log Message (Info):
+             "Municipal Complaint Bot completed at " + Now.ToString()
+
+
+--------------------------------------------------------------------------------
+DATA FLOW SUMMARY
+--------------------------------------------------------------------------------
+
+  CSV File ──────────────────────────────────────────────┐
+                                                         ▼
+  PDF Files ──► ExtractFromPDF ─────────────► dt_MasterComplaintsRaw
+                                                         │
+                                                         ▼
+                                           NormalizeData (clean & validate)
+                                                         │
+                                                         ▼
+                                           ClassifyComplaint (keyword match)
+                                                         │
+                                           ┌─────────────┴─────────────┐
+                                           ▼                           ▼
+                                      WriteOutput               SendSummaryEmail
+                                 (Excel: complaints          (Gmail: daily stats
+                                  + error log)                to supervisor)
+
+
+--------------------------------------------------------------------------------
+KEYWORD CLASSIFICATION REFERENCE
+--------------------------------------------------------------------------------
+
+  Category      | Keywords Used
+  --------------|-------------------------------------------------------
+  Water         | burst pipe, no water supply, low water pressure
+  Electricity   | load shedding, transformer exploded, no power
+  Refuse        | bin not collected, rubbish piling up, refuse truck missed
+  Other         | (default — any complaint not matching above)
+
+
+================================================================================
+END OF GUIDE
+================================================================================
