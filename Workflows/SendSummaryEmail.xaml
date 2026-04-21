@@ -114,13 +114,13 @@
       <AssemblyReference>UiPath.Workflow</AssemblyReference>
     </sco:Collection>
   </TextExpression.ReferencesForImplementation>
-  <Sequence DisplayName="SendSummaryEmail" sap:VirtualizedContainerService.HintSize="2656,2145" sap2010:WorkflowViewState.IdRef="Sequence_1">
+  <Sequence DisplayName="SendSummaryEmail" sap:VirtualizedContainerService.HintSize="2656,2183" sap2010:WorkflowViewState.IdRef="Sequence_1">
     <sap:WorkflowViewStateService.ViewState>
       <scg:Dictionary x:TypeArguments="x:String, x:Object">
         <x:Boolean x:Key="IsExpanded">True</x:Boolean>
       </scg:Dictionary>
     </sap:WorkflowViewStateService.ViewState>
-    <Sequence DisplayName="Send Summary Email Sequence" sap:VirtualizedContainerService.HintSize="522,2122" sap2010:WorkflowViewState.IdRef="Sequence_2">
+    <Sequence DisplayName="Send Summary Email Sequence" sap:VirtualizedContainerService.HintSize="522,2160" sap2010:WorkflowViewState.IdRef="Sequence_2">
       <Sequence.Variables>
         <Variable x:TypeArguments="x:String" Name="strEmailBody" />
         <Variable x:TypeArguments="x:Int32" Name="intOther" />
@@ -133,7 +133,7 @@
           <x:Boolean x:Key="IsExpanded">True</x:Boolean>
         </scg:Dictionary>
       </sap:WorkflowViewStateService.ViewState>
-      <If Condition="[in_ClassifiedTable Is Nothing OrElse in_ClassifiedTable.Rows.Count = 0]" DisplayName="Error Check - If DataTable Empty" sap:VirtualizedContainerService.HintSize="488,1655" sap2010:WorkflowViewState.IdRef="If_1">
+      <If Condition="[in_ClassifiedTable Is Nothing OrElse in_ClassifiedTable.Rows.Count = 0]" DisplayName="Error Check - If DataTable Empty" sap:VirtualizedContainerService.HintSize="488,1593" sap2010:WorkflowViewState.IdRef="If_1">
         <If.Then>
           <Sequence DisplayName="Then" sap:VirtualizedContainerService.HintSize="486,25" sap2010:WorkflowViewState.IdRef="Sequence_3">
             <sap:WorkflowViewStateService.ViewState>
@@ -146,13 +146,13 @@
           </Sequence>
         </If.Then>
         <If.Else>
-          <Sequence DisplayName="Else" sap:VirtualizedContainerService.HintSize="486,1491" sap2010:WorkflowViewState.IdRef="Sequence_4">
+          <Sequence DisplayName="Else" sap:VirtualizedContainerService.HintSize="486,1429" sap2010:WorkflowViewState.IdRef="Sequence_4">
             <sap:WorkflowViewStateService.ViewState>
               <scg:Dictionary x:TypeArguments="x:String, x:Object">
                 <x:Boolean x:Key="IsExpanded">True</x:Boolean>
               </scg:Dictionary>
             </sap:WorkflowViewStateService.ViewState>
-            <If Condition="[Not in_ClassifiedTable.Columns.Contains(&quot;Bot_Classification&quot;)]" DisplayName="Error Check - Correct Colomn" sap:VirtualizedContainerService.HintSize="452,1431" sap2010:WorkflowViewState.IdRef="If_2">
+            <If Condition="[Not in_ClassifiedTable.Columns.Contains(&quot;Bot_Classification&quot;)]" DisplayName="Error Check - Correct Colomn" sap:VirtualizedContainerService.HintSize="452,1369" sap2010:WorkflowViewState.IdRef="If_2">
               <sap:WorkflowViewStateService.ViewState>
                 <scg:Dictionary x:TypeArguments="x:String, x:Object">
                   <x:Boolean x:Key="IsExpanded">True</x:Boolean>
@@ -171,7 +171,7 @@
                 </Sequence>
               </If.Then>
               <If.Else>
-                <Sequence DisplayName="Else" sap:VirtualizedContainerService.HintSize="450,1276" sap2010:WorkflowViewState.IdRef="Sequence_6">
+                <Sequence DisplayName="Else" sap:VirtualizedContainerService.HintSize="450,1214" sap2010:WorkflowViewState.IdRef="Sequence_6">
                   <Sequence.Variables>
                     <Variable x:TypeArguments="x:Int32" Name="intTotal" />
                   </Sequence.Variables>
@@ -233,14 +233,14 @@
 "Other: " + intOther.ToString]</InArgument>
                     </Assign.Value>
                   </Assign>
-                  <ui:LogMessage DisplayName="Log Email Sent" sap:VirtualizedContainerService.HintSize="416,166" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[&quot;Summary email sent successfully&quot;]" />
+                  <ui:LogMessage DisplayName="Log Email Sent" sap:VirtualizedContainerService.HintSize="416,104" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[&quot;Summary email sent successfully&quot;]" />
                 </Sequence>
               </If.Else>
             </If>
           </Sequence>
         </If.Else>
       </If>
-      <uga:SendEmailConnections ArgumentAttachmentPaths="{x:Null}" ArgumentAttachments="{x:Null}" AttachmentPaths="{x:Null}" Bcc="{x:Null}" Cc="{x:Null}" ConnectionAccountName="{x:Null}" ContinueOnError="{x:Null}" ReplyTo="{x:Null}" SaveAsDraft="{x:Null}" SingleAttachment="{x:Null}" TextBody="{x:Null}" AttachmentInputMode="UseExisting" AuthScopesInvalid="False" Body="[strEmailBody]" ConnectionId="785def4f-acc6-45b8-8168-63ecffb4cd7f" DisplayName="Send Email" sap:VirtualizedContainerService.HintSize="488,384" sap2010:WorkflowViewState.IdRef="SendEmailConnections_1" Importance="Normal" InputType="HTML" Subject="Daily Complaints Summary" To="[New String() {&quot;estian.visagie@gmail.com&quot;}]" UseConnectionService="True">
+      <uga:SendEmailConnections ArgumentAttachmentPaths="{x:Null}" ArgumentAttachments="{x:Null}" AttachmentPaths="{x:Null}" Bcc="{x:Null}" Cc="{x:Null}" ConnectionAccountName="{x:Null}" ContinueOnError="{x:Null}" ReplyTo="{x:Null}" SaveAsDraft="{x:Null}" SingleAttachment="{x:Null}" TextBody="{x:Null}" AttachmentInputMode="UseExisting" AuthScopesInvalid="False" Body="[strEmailBody]" ConnectionId="785def4f-acc6-45b8-8168-63ecffb4cd7f" DisplayName="Send Email" sap:VirtualizedContainerService.HintSize="488,484" sap2010:WorkflowViewState.IdRef="SendEmailConnections_1" Importance="Normal" InputType="HTML" Subject="Daily Complaints Summary" To="[{in_SupervisorEmail}]" UseConnectionService="True">
         <uga:SendEmailConnections.Attachments>
           <InArgument x:TypeArguments="scg:IEnumerable(upr:IResource)" />
         </uga:SendEmailConnections.Attachments>
